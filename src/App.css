@@ -1,0 +1,63 @@
+body {
+  margin: 0;
+  font-family: "Roboto", sans-serif;
+}
+
+.App {
+  /* height: 100vh; */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5%;
+}
+
+p span {
+  color: #0385FF;
+  cursor: pointer;
+}
+
+p {
+  text-align: center;
+}
+
+.btn-icon {
+  font-size: 20px;
+}
+
+.app-link {
+  display: flex;
+  flex-direction: column;
+  min-height: 50vh;
+  max-width: 65vw;
+  justify-content: center;
+  /* justify-content: space-between; */
+  align-items: center;  
+}
+
+.app-link > * {
+  margin-block: 10%;
+}
+
+.success {
+  background-color: #00B163;
+}
+
+.main-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
+p.text {
+  text-align: center;
+  margin: 10% 0 5% 0;
+}
+
+.logo-img {
+  width: 250px;
+  margin-bottom: 20px;
+
+}
+  
+
