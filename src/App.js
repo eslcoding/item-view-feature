@@ -1,98 +1,153 @@
 import React from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import mondaySdk from "monday-sdk-js";
-import "monday-ui-react-core/dist/main.css"
-import userService from './services/userService'
-//Explore more Monday React Components here: https://style.monday.com/
-import AttentionBox from "monday-ui-react-core/dist/AttentionBox.js"
-import Button from "monday-ui-react-core/dist/Button.js"
-import MenuButton from "monday-ui-react-core/dist/MenuButton.js"
-import { FontIcon } from 'office-ui-fabric-react/lib/Icon';
+import "monday-ui-react-core/dist/main.css";
+import boardService from "./services/boardService";
+import Select from "react-select";
+import Relation from "./cmps/Relation";
+import Loader from "./cmps/Loader";
 
-const img = require('./assets/img/esl-logo.jpg')
+//Explore more Monday React Components here: https://style.monday.com/
+// import AttentionBox from "monday-ui-react-core/dist/AttentionBox.js";
+// import Button from "monday-ui-react-core/dist/Button.js";
+// import MenuButton from "monday-ui-react-core/dist/MenuButton.js";
+// import { FontIcon } from "office-ui-fabric-react/lib/Icon";
+
 const monday = mondaySdk();
 
-class App extends React.Component {
+export default function App() {
+  const [boards, setBoards] = useState();
+  const [fatherBoard, setFatherBoard] = useState();
+  const [childBoards, setChildBoards] = useState([]);
+  const [userId, setUserId] = useState();
+  const [relations, setRelations] = useState([]);
+  const [loading, SetLoading] = useState(true);
 
+  useEffect(() => {
+    getContext();
+  }, []);
 
-  // Default state
-  state = {
-    settings: {},
-    name: "",
-    color: 'primary',
-    isShowTxt: false,
-    isUserExist: true
-
+  useEffect(() => {
+    getBoard();
+  }, [fatherBoard]);
+  useEffect(() => {
+    userId && boards && getBoardRelations();
+  }, [userId, boards]);
+  // useEffect(() => {}, []);
+  const getContext = async () => {
+    const context = await monday.get("context");
+    setUserId(Number(context.data.user.id));
+    try {
+      const query = `query{
+        boards(limit:2000){
+          id
+          name
+        }
+      }`;
+      const res = await monday.api(query);
+      // console.log(`getContext -> res`, res.data);
+      const labeledBoards = res?.data?.boards?.map((board) => {
+        return { value: board.id, label: board.name };
+      });
+      // console.log(`labeledBoards -> labeledBoards`, labeledBoards);
+      setBoards(labeledBoards);
+    } catch (err) {
+      console.log(`getContext -> err`, err);
+    }
   };
 
-  navToStore() {
-    window.open('https://appsource.microsoft.com/en-us/product/office/WA200002596?tab=Overview')
-  }
+  const getBoardRelations = async () => {
+    const boardRelations = await boardService.getUserBoards(userId);
+    // console.log(`getBoardRelations -> boardRelations`, boardRelations);
+    setRelations(boardRelations?.data);
+    SetLoading(false);
+  };
+  const getBoard = async () => {
+    const selected = boards?.find((board) => board.name === fatherBoard);
+    // console.log(`getBoard -> selected`, selected);
+  };
+  const onSetFatherBoard = (board) => {
+    setFatherBoard(board);
+  };
 
-  setItemToStart = async () => {
-    if (!this.state.isUserExist || this.state.color === 'positive') return
-    try {
+  const onSetChildBoards = (chosenBoards) => {
+    setChildBoards(chosenBoards);
+  };
+  const addBoardsRelations = async () => {
+    const subIds = childBoards.map((board) => Number(board.value));
+    // console.log(
+    //   `addBoardsRelations -> fatherBoard, childBoards, userId`,
+    //   fatherBoard.value,
+    //   subIds,
+    //   userId
+    // );
+    const newRelation = await boardService.add(
+      Number(fatherBoard.value),
+      subIds,
+      userId
+    );
+    setRelations([...relations, newRelation]);
+  };
 
-      const { data: { boardId, itemId } } = await monday.get('context')
-      const query = `query {
-      boards (ids: ${boardId}) {
-        name
-        groups {
-          id
-          items{
-            id
-            name
-          }
-        }
-      }
-      me { 
-        name
-        email
-      }
-    }`
-      const res = await monday.api(query)
-      const { me: { email } } = res.data
-      console.log('setItemToStart= -> email', email)
-      const userTest = await userService.isUserExist(email)
-      console.log('setItemToStart= -> userTest', userTest)
-      if (!userTest || userTest?.error) {
-        this.setState({ isUserExist: false, color: 'negative' })
-        return
-      }
-      const { groups } = res.data.boards[0]
+  // const fatherBoardName = {
+  //   value: fatherBoard?.value,
+  //   label: fatherBoard?.label || "Choose a main board",
+  // };
+  const boardNames = boards?.filter(
+    (board) => board?.value !== fatherBoard?.value
+  );
+  // console.log(`App -> boardNames`, boardNames);
+  // const childBoardNames = childBoards?.filter((child) => {
+  //   return { label: child.name, value: child.id };
+  // });
 
-      // const groupId = groups.find(group => group.items.some(item => +item.id === itemId)).id
-      const groupId = groups.find(group => group.items.some(item => +item.id === itemId)).id
+  return (
+    <div className="App">
+      {loading ? (
+        <Loader />
+      ) : (
+        <>
+          <div className="content">
+            <h1>Create new relation</h1>
+            {boards && (
+              <div>
+                <Select
+                  placeholder="Choose a main board"
+                  value={fatherBoard}
+                  options={boardNames}
+                  onChange={(board) => onSetFatherBoard(board)}
+                />
+                <Select
+                  isMulti
+                  placeholder="Choose sub boards"
+                  value={childBoards}
+                  options={boardNames}
+                  onChange={(board) => onSetChildBoards(board)}
+                />
+              </div>
+            )}
 
-      // userService.setStartItem(email, boardId, groupId, itemId)
-      await userService.setStartItem(email, boardId, groupId, itemId)
-      this.setState({ ...this.state, color: 'positive', isShowTxt: !this.state.isShowTxt })
-
-    } catch (err) {
-      console.log('err check if user exist: ', err);
-
-    }
-
-
-  }
-
-
-
-
-  render() {
-    return <div className="App">
-      <section className="app-link">
-        <FontIcon className="btn-icon" iconName="Refresh" color="blue">Refresh</FontIcon>
-        <h3>ESL's monday.com for outlook</h3>
-        <Button color={this.state.color} className="success" onClick={this.setItemToStart}>Work on this item from Outlook</Button>
-        {this.state.isShowTxt && <div><p>Job done! This item has been set as your last state</p><p>Please click the refresh button to view it with in outlook</p></div>}
-        {!this.state.isUserExist && <div>
-          <p>We're sorry, but it seems like you are not registerd in ESl's monday.com for outlook</p>
-          <p>Please click the <span onClick={this.navToStore}>here</span> to sign in</p>
-        </div>}
-      </section>
-    </div>;
-  }
+            <button className="add-button" onClick={addBoardsRelations}>
+              Add boards relation
+            </button>
+          </div>
+          {/* <button onClick={addBoardsNames}>names</button> */}
+          <div className="edit-boards">
+            <h1> edit existing relations</h1>
+            {relations &&
+              relations?.map((relation, i) => (
+                <Relation
+                  key={i}
+                  relation={relation}
+                  boardNames={boardNames}
+                  boards={boards}
+                  userId={userId}
+                />
+              ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
-
-export default App;

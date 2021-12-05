@@ -6,58 +6,94 @@ body {
 .App {
   /* height: 100vh; */
   display: flex;
+  /* flex-direction: column; */
   align-items: center;
-  justify-content: center;
+  justify-content: space-evenly;
   padding: 5%;
 }
-
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 40vw;
+  text-align: center;
+}
 p span {
-  color: #0385FF;
+  color: #0385ff;
   cursor: pointer;
 }
 
 p {
   text-align: center;
 }
-
-.btn-icon {
-  font-size: 20px;
-}
-
-.app-link {
-  display: flex;
-  flex-direction: column;
-  min-height: 50vh;
-  max-width: 65vw;
-  justify-content: center;
-  /* justify-content: space-between; */
-  align-items: center;  
-}
-
-.app-link > * {
-  margin-block: 10%;
-}
-
-.success {
-  background-color: #00B163;
-}
-
-.main-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-
-p.text {
+.add-button {
+  width: 180px;
+  align-self: center;
+  margin-top: 5%;
+  display: inline-block;
   text-align: center;
-  margin: 10% 0 5% 0;
+  vertical-align: middle;
+  padding: 8px 20px;
+  border: 1px solid #006acc;
+  border-radius: 4px;
+  background: #00acff;
+  background: -webkit-gradient(
+    linear,
+    left top,
+    left bottom,
+    from(#00acff),
+    to(#006acc)
+  );
+  background: -moz-linear-gradient(top, #00acff, #006acc);
+  background: linear-gradient(to bottom, #00acff, #006acc);
+  text-shadow: #004280 1px 1px 1px;
+  font: normal normal bold 20px arial;
+  color: #ffffff;
+  text-decoration: none;
+  min-width: 61px;
+  cursor: pointer;
 }
 
-.logo-img {
-  width: 250px;
-  margin-bottom: 20px;
-
+.add-button.checkout {
+  align-self: flex-start;
 }
-  
 
+.add-button:hover,
+.add-button:focus {
+  border: 1px solid #0084ff;
+  background: #00ceff;
+  background: -webkit-gradient(
+    linear,
+    left top,
+    left bottom,
+    from(#00ceff),
+    to(#007ff5)
+  );
+  background: -moz-linear-gradient(top, #00ceff, #007ff5);
+  background: linear-gradient(to bottom, #00ceff, #007ff5);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.add-button:active {
+  background: #006acc;
+  background: -webkit-gradient(
+    linear,
+    left top,
+    left bottom,
+    from(#006acc),
+    to(#006acc)
+  );
+  background: -moz-linear-gradient(top, #006acc, #006acc);
+  background: linear-gradient(to bottom, #006acc, #006acc);
+}
+.add-button:disabled {
+  background: gray !important;
+  cursor: default;
+}
+.loader {
+  position: absolute;
+  top: calc(35vh - 35px);
+  left: calc(50vw - 35px);
+  width: 70px;
+}
