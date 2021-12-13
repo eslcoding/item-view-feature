@@ -7,7 +7,7 @@ body {
   /* height: 100vh; */
   display: flex;
   /* flex-direction: column; */
-  align-items: center;
+  /* align-items: center; */
   justify-content: space-evenly;
   padding: 5%;
 }
@@ -18,6 +18,13 @@ body {
   max-width: 40vw;
   text-align: center;
 }
+.content h1 {
+  align-self: flex-start;
+}
+.content > div {
+  width: 100%;
+  /* min-width: 30vw; */
+}
 p span {
   color: #0385ff;
   cursor: pointer;
@@ -25,6 +32,9 @@ p span {
 
 p {
   text-align: center;
+}
+.new {
+  align-self: flex-start;
 }
 .add-button {
   width: 180px;

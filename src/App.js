@@ -18,7 +18,8 @@ const monday = mondaySdk();
 
 export default function App() {
   const [boards, setBoards] = useState();
-  const [fatherBoard, setFatherBoard] = useState();
+  const [fatherBoard, setFatherBoard] = useState({});
+  const [fatherBoardColumns, setFatherBoardColumns] = useState();
   const [childBoards, setChildBoards] = useState([]);
   const [userId, setUserId] = useState();
   const [relations, setRelations] = useState([]);
@@ -29,14 +30,15 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    getBoard();
-  }, [fatherBoard]);
-  useEffect(() => {
     userId && boards && getBoardRelations();
   }, [userId, boards]);
   // useEffect(() => {}, []);
   const getContext = async () => {
+    // console.log("hi");
     const context = await monday.get("context");
+    // console.log(`getContext -> context`, context);
+    const token = await monday.get("sessionToken");
+    // console.log(`getContext -> token`, token);
     setUserId(Number(context.data.user.id));
     try {
       const query = `query{
@@ -56,19 +58,39 @@ export default function App() {
       console.log(`getContext -> err`, err);
     }
   };
+  const getFatherBoardColumns = async (boardId) => {
+    const query = `query{
+      boards(ids:${boardId}){
+        columns{
+          type
+          title
+          id
+        }
+      }
+    }`;
+    const res = await monday.api(query);
+    // console.log(`getFatherBoardColumns -> res`, res);
 
+    const columns = [];
+    let columnData = res.data.boards[0].columns?.forEach((column) => {
+      if (column.type === "dropdown")
+        columns.push({ value: column.id, label: column.title });
+      // return (arr[i] = { value: column.id, label: column.title });
+    });
+    setFatherBoardColumns(columns);
+    // const formattedColumns = columns.forEach(column);
+    // console.log(`getFatherBoardColumns -> columns`, columns);
+  };
   const getBoardRelations = async () => {
     const boardRelations = await boardService.getUserBoards(userId);
     // console.log(`getBoardRelations -> boardRelations`, boardRelations);
     setRelations(boardRelations?.data);
     SetLoading(false);
   };
-  const getBoard = async () => {
-    const selected = boards?.find((board) => board.name === fatherBoard);
-    // console.log(`getBoard -> selected`, selected);
-  };
+
   const onSetFatherBoard = (board) => {
-    setFatherBoard(board);
+    const dropdown = getFatherBoardColumns(board.value);
+    setFatherBoard({ board: board, column: dropdown });
   };
 
   const onSetChildBoards = (chosenBoards) => {
@@ -76,17 +98,22 @@ export default function App() {
   };
   const addBoardsRelations = async () => {
     const subIds = childBoards.map((board) => Number(board.value));
-    // console.log(
-    //   `addBoardsRelations -> fatherBoard, childBoards, userId`,
-    //   fatherBoard.value,
-    //   subIds,
-    //   userId
-    // );
-    const newRelation = await boardService.add(
-      Number(fatherBoard.value),
-      subIds,
-      userId
+
+    const newRelation = await boardService.add(fatherBoard, subIds, userId);
+    // console.log(`addBoardsRelations -> newRelation`, newRelation);
+
+    // console.log(`addBoardsRelations -> fatherBoard`, fatherBoard);
+    const res2 = await boardService.createNewItemWebHook(
+      Number(fatherBoard.board.value),
+      fatherBoard.column.value
     );
+    const subBoards = childBoards.map((board) => board.value);
+    const res = subBoards?.forEach(
+      async (board) => await boardService.createMirrorWebHook(board)
+    );
+    // console.log(`addBoardsRelations -> res`, res);
+    // console.log(`addBoardsRelations -> res`, res);
+    // console.log(`addBoardsRelations -> res2`, res2);
     setRelations([...relations, newRelation]);
   };
 
@@ -95,28 +122,44 @@ export default function App() {
   //   label: fatherBoard?.label || "Choose a main board",
   // };
   const boardNames = boards?.filter(
-    (board) => board?.value !== fatherBoard?.value
+    (board) => board?.value !== fatherBoard?.board?.value
   );
   // console.log(`App -> boardNames`, boardNames);
   // const childBoardNames = childBoards?.filter((child) => {
   //   return { label: child.name, value: child.id };
   // });
-
+  const deleteRelation = async (_id) => {
+    console.log(`deleteRelation -> _id`, _id);
+    await boardService.deleteRelation(_id);
+    const filteredRelations = relations.filter(
+      (relation) => relation._id !== _id
+    );
+    console.log(`deleteRelation -> filteredRelations`, filteredRelations);
+    setRelations(filteredRelations);
+  };
   return (
     <div className="App">
       {loading ? (
         <Loader />
       ) : (
         <>
-          <div className="content">
+          <div className="content new">
             <h1>Create new relation</h1>
             {boards && (
               <div>
                 <Select
                   placeholder="Choose a main board"
-                  value={fatherBoard}
+                  value={fatherBoard.board}
                   options={boardNames}
                   onChange={(board) => onSetFatherBoard(board)}
+                />
+                <Select
+                  placeholder="Choose a dropdown"
+                  options={fatherBoardColumns}
+                  value={fatherBoard?.column}
+                  onChange={(column) =>
+                    setFatherBoard({ ...fatherBoard, column })
+                  }
                 />
                 <Select
                   isMulti
@@ -134,10 +177,11 @@ export default function App() {
           </div>
           {/* <button onClick={addBoardsNames}>names</button> */}
           <div className="edit-boards">
-            <h1> edit existing relations</h1>
+            {relations.length > 0 && <h1> edit existing relations</h1>}
             {relations &&
               relations?.map((relation, i) => (
                 <Relation
+                  deleteRelation={deleteRelation}
                   key={i}
                   relation={relation}
                   boardNames={boardNames}

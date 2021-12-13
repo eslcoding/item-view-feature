@@ -1,21 +1,53 @@
 import React, { useEffect, useState } from "react";
 import Select from "react-select";
 import boardService from "../services/boardService";
+import mondaySdk from "monday-sdk-js";
+const monday = mondaySdk();
 
-export default function Relation({ relation, boards, boardNames, userId }) {
-  // console.log(`Relation -> relation`, relation);
-  // const [edit, setEdit] = useState(false)
+export default function Relation({
+  relation,
+  boards,
+  boardNames,
+  userId,
+  deleteRelation,
+}) {
   const [boardRelation, setBoardRelation] = useState({
-    mainBoard: { value: 0, label: "" },
+    mainBoard: {
+      board: { value: 0, label: "" },
+      column: { value: "", label: "" },
+    },
     subBoards: [],
     userId,
     _id: relation._id,
   });
+  const [mainBoardColumns, setMainBoardColumns] = useState();
   // console.log(`Relation -> boardRelationId`, boardRelation._id);
 
   useEffect(() => {
     addBoardsNames();
   }, []);
+  const getMainBoardColumns = async (boardId) => {
+    const query = `query{
+      boards(ids:${boardId}){
+        columns{
+          type
+          title
+          id
+        }
+      }
+    }`;
+    const res = await monday.api(query);
+    const columns = [];
+    let columnData = res.data.boards[0].columns?.forEach((column) => {
+      if (column.type === "dropdown")
+        columns.push({ value: column.id, label: column.title });
+      // return (arr[i] = { value: column.id, label: column.title });
+    });
+    setMainBoardColumns(columns);
+    // const formattedColumns = columns.forEach(column);
+    // console.log(`getFatherBoardColumns -> columns`, columns);
+  };
+
   const editRelation = async () => {
     const simpSubBoards = boardRelation.subBoards.map((sub) =>
       Number(sub.value)
@@ -31,20 +63,21 @@ export default function Relation({ relation, boards, boardNames, userId }) {
   };
   const addBoardsNames = (object = relation) => {
     const tempRelation = {
-      mainBoard: { value: 0, label: "" },
+      mainBoard: {
+        board: { value: 0, label: "" },
+        column: { value: "", label: "" },
+      },
       subBoards: [],
       _id: relation._id,
       userId: boardRelation.userId,
     };
-    tempRelation.mainBoard = boards?.filter(
-      (board) => board.value == object.mainBoard
-    )[0];
+    tempRelation.mainBoard = object.mainBoard;
     tempRelation.subBoards = object?.subBoards.map(
       (subBoard) =>
         boards?.filter((board) => Number(board.value) === subBoard)[0]
     );
 
-    // console.log(`addBoardsNames -> tempRelation`, tempRelation);
+    console.log(`addBoardsNames -> tempRelation`, tempRelation);
     setBoardRelation(tempRelation);
   };
   const onSetRelation = (kind, newBoards) => {
@@ -62,6 +95,7 @@ export default function Relation({ relation, boards, boardNames, userId }) {
       newRelation.mainBoard = newBoards;
     }
     setBoardRelation(newRelation);
+    getMainBoardColumns(newRelation.mainBoard.board.value);
     // console.log(`onSetRelation -> newRelation`, newRelation);
   };
 
@@ -70,9 +104,17 @@ export default function Relation({ relation, boards, boardNames, userId }) {
     <div className="content">
       <Select
         placeholder="Choose a main board"
-        value={boardRelation.mainBoard}
+        value={boardRelation.mainBoard?.board}
         options={boardNames}
-        defaultValue={boardRelation.mainBoard}
+        defaultValue={boardRelation.mainBoard?.board}
+        // isDisabled={edit}
+        onChange={(boards) => onSetRelation("main", boards)}
+      />
+      <Select
+        placeholder="Choose a dropdown"
+        value={boardRelation.mainBoard?.column}
+        // options={boardNames}
+        defaultValue={boardRelation.mainBoard?.column}
         // isDisabled={edit}
         onChange={(boards) => onSetRelation("main", boards)}
       />
@@ -86,6 +128,12 @@ export default function Relation({ relation, boards, boardNames, userId }) {
       />
       <button className="add-button" onClick={editRelation}>
         Update
+      </button>
+      <button
+        className="add-button"
+        onClick={() => deleteRelation(relation._id)}
+      >
+        delete
       </button>
     </div>
   );
