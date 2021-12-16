@@ -11,6 +11,7 @@ export default function Relation({
   userId,
   deleteRelation,
 }) {
+  console.log(`relation`, relation);
   const [boardRelation, setBoardRelation] = useState({
     mainBoard: {
       board: { value: 0, label: "" },
@@ -53,7 +54,7 @@ export default function Relation({
       Number(sub.value)
     );
     const res = await boardService.update(
-      Number(boardRelation.mainBoard.value),
+      boardRelation.mainBoard,
       simpSubBoards,
       userId,
       boardRelation._id
@@ -72,7 +73,7 @@ export default function Relation({
       userId: boardRelation.userId,
     };
     tempRelation.mainBoard = object.mainBoard;
-    tempRelation.subBoards = object?.subBoards.map(
+    tempRelation.subBoards = object?.subBoards?.map(
       (subBoard) =>
         boards?.filter((board) => Number(board.value) === subBoard)[0]
     );
@@ -81,6 +82,7 @@ export default function Relation({
     setBoardRelation(tempRelation);
   };
   const onSetRelation = (kind, newBoards) => {
+    console.log(`onSetRelation -> newBoards`, newBoards);
     // console.log(`onSetRelation -> userId`, userId);
     // console.log(`onSetRelation -> newBoards`, newBoards);
     let newRelation = {
@@ -89,10 +91,12 @@ export default function Relation({
       subBoards: boardRelation.subBoards,
       _id: relation._id,
     };
+    console.log(`onSetRelation -> boardRelation`, boardRelation);
+    console.log(`onSetRelation -> newRelation`, newRelation);
     if (kind === "sub") {
       newRelation.subBoards = newBoards;
     } else {
-      newRelation.mainBoard = newBoards;
+      newRelation.mainBoard.board = newBoards;
     }
     setBoardRelation(newRelation);
     getMainBoardColumns(newRelation.mainBoard.board.value);

@@ -4,12 +4,12 @@ body {
 }
 
 .App {
-  /* height: 100vh; */
-  display: flex;
-  /* flex-direction: column; */
-  /* align-items: center; */
-  justify-content: space-evenly;
   padding: 5%;
+}
+.relation-controller {
+  display: flex;
+
+  justify-content: space-evenly;
 }
 .content {
   display: flex;
@@ -100,6 +100,11 @@ p {
 .add-button:disabled {
   background: gray !important;
   cursor: default;
+}
+.connect-btn {
+  height: 60px;
+  width: 190px;
+  margin: 0;
 }
 .loader {
   position: absolute;
