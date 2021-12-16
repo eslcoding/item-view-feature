@@ -25,15 +25,20 @@ export default function RelationController({ context, userId, user }) {
   const [childBoards, setChildBoards] = useState([]);
   // const [userId, setUserId] = useState();
   const [relations, setRelations] = useState([]);
-  const [loading, SetLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getContext();
   }, []);
 
   useEffect(() => {
-    boards && user && getBoardRelations();
-  }, [boards]);
+    if (boards && user) {
+      getBoardRelations();
+      setLoading(false);
+    }
+    console.log(`useEffect -> boards`, boards);
+    console.log(`useEffect -> user`, user);
+  }, [user, boards]);
   // useEffect(() => {}, []);
   const getContext = async () => {
     try {
@@ -76,7 +81,7 @@ export default function RelationController({ context, userId, user }) {
     console.log("hey getboards");
     const boardRelations = await boardService.getUserBoards(user.userDomain);
     setRelations(boardRelations?.data);
-    SetLoading(false);
+    setLoading(false);
   };
 
   const onSetFatherBoard = (board) => {
@@ -89,24 +94,33 @@ export default function RelationController({ context, userId, user }) {
   };
   const addBoardsRelations = async () => {
     const subIds = childBoards.map((board) => Number(board.value));
+    if (!fatherBoard || !subIds) return alert("yo");
+    let mainWebhook;
 
+    // console.log(`addBoardsRelations -> fatherBoard`, fatherBoard);
+    const mainRes = await boardService.createNewItemWebHook(
+      Number(fatherBoard.board.value),
+      fatherBoard.column.value
+    );
+    mainWebhook = Number(mainRes);
+    // console.log(`addBoardsRelations -> res2`, res2);
+    const subBoards = childBoards.map((board) => board.value);
+    const res = subBoards?.map(async (board) => {
+      const subRes = await boardService.createMirrorWebHook(board);
+      console.log(`res -> subRes`, subRes);
+      return subRes;
+    });
+    const subWebhooks = await Promise.all(res);
+    console.log(`res -> res`, res);
+    console.log(`res -> subWebhooks`, subWebhooks);
     const newRelation = await boardService.add(
       fatherBoard,
       subIds,
       userId,
-      user.userDomain
+      user.userDomain,
+      mainWebhook,
+      subWebhooks
     );
-
-    // console.log(`addBoardsRelations -> fatherBoard`, fatherBoard);
-    const res2 = await boardService.createNewItemWebHook(
-      Number(fatherBoard.board.value),
-      fatherBoard.column.value
-    );
-    const subBoards = childBoards.map((board) => board.value);
-    const res = subBoards?.forEach(
-      async (board) => await boardService.createMirrorWebHook(board)
-    );
-
     setRelations([...relations, newRelation]);
     setFatherBoard();
     setChildBoards();
@@ -115,10 +129,10 @@ export default function RelationController({ context, userId, user }) {
   const boardNames = boards?.filter(
     (board) => board?.value !== fatherBoard?.board?.value
   );
-  const deleteRelation = async (_id) => {
-    await boardService.deleteRelation(_id);
+  const deleteRelation = async (relation) => {
+    await boardService.deleteRelation(relation);
     const filteredRelations = relations.filter(
-      (relation) => relation._id !== _id
+      (boardRelation) => boardRelation._id !== relation._id
     );
     setRelations(filteredRelations);
   };
@@ -133,13 +147,41 @@ export default function RelationController({ context, userId, user }) {
             <h1>Create new relation</h1>
             {boards && (
               <div>
+                {/* <label
+                  htmlFor={
+                    fatherBoard?.board?.value
+                      ? fatherBoard?.board?.value
+                      : "tempId1"
+                  }
+                >
+                  Main Board
+                </label> */}
                 <Select
+                  // id={
+                  //   fatherBoard?.board?.value
+                  //     ? fatherBoard?.board?.value
+                  //     : "tempId1"
+                  // }
                   placeholder="Choose a main board"
                   value={fatherBoard?.board}
                   options={boardNames}
                   onChange={(board) => onSetFatherBoard(board)}
                 />
+                {/* <label
+                  htmlFor={
+                    fatherBoard?.column?.value
+                      ? fatherBoard?.column?.value
+                      : "tempId2"
+                  }
+                >
+                  Supported Dropdown
+                </label> */}
                 <Select
+                  // id={
+                  //   fatherBoard?.column?.value
+                  //     ? fatherBoard?.column?.value
+                  //     : "tempId2"
+                  // }
                   placeholder="Choose a dropdown"
                   options={fatherBoardColumns}
                   value={fatherBoard?.column}
@@ -147,7 +189,11 @@ export default function RelationController({ context, userId, user }) {
                     setFatherBoard({ ...fatherBoard, column })
                   }
                 />
+                {/* <label htmlFor={childBoards[0] ? childBoards[0] : "tempId3"}>
+                  Sub Boards
+                </label> */}
                 <Select
+                  // id={childBoards[0] ? childBoards[0] : "tempId3"}
                   isMulti
                   placeholder="Choose sub boards"
                   value={childBoards}

@@ -100,13 +100,14 @@ export default function Relation({
     }
     setBoardRelation(newRelation);
     getMainBoardColumns(newRelation.mainBoard.board.value);
-    // console.log(`onSetRelation -> newRelation`, newRelation);
   };
 
   return (
     // <div className="relation">
     <div className="content">
+      {/* <label htmlFor={boardRelation.mainBoard?.board?.value}>Main Board</label> */}
       <Select
+        // id={boardRelation.mainBoard?.board?.value}
         placeholder="Choose a main board"
         value={boardRelation.mainBoard?.board}
         options={boardNames}
@@ -114,7 +115,11 @@ export default function Relation({
         // isDisabled={edit}
         onChange={(boards) => onSetRelation("main", boards)}
       />
+      {/* <label htmlFor={boardRelation.mainBoard?.column?.value}>
+        Supported Dropdown
+      </label> */}
       <Select
+        // id={boardRelation.mainBoard?.column?.value}
         placeholder="Choose a dropdown"
         value={boardRelation.mainBoard?.column}
         // options={boardNames}
@@ -122,7 +127,9 @@ export default function Relation({
         // isDisabled={edit}
         onChange={(boards) => onSetRelation("main", boards)}
       />
+      {/* <label htmlFor={boardRelation.subBoards[0]}>Sub Boards</label> */}
       <Select
+        // id={boardRelation.subBoards[0]}
         isMulti
         placeholder="Choose sub boards"
         value={boardRelation.subBoards}
@@ -133,10 +140,7 @@ export default function Relation({
       <button className="add-button" onClick={editRelation}>
         Update
       </button>
-      <button
-        className="add-button"
-        onClick={() => deleteRelation(relation._id)}
-      >
+      <button className="add-button" onClick={() => deleteRelation(relation)}>
         delete
       </button>
     </div>

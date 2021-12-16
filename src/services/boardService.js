@@ -7,7 +7,7 @@ const monday = mondaySdk();
 
 // "https://7ab5-2a0e-9cc0-2411-3000-7912-989f-c26e-17ae.ngrok.io";
 const domain =
-  "https://27cd-2a0e-9cc0-2447-e900-142a-630b-5983-6007.eu.ngrok.io";
+  "https://63bc-2a0e-9cc0-2447-e900-142a-630b-5983-6007.ap.ngrok.io";
 // process.env.NODE_ENV === "production"
 //   ? "https://create-group-integration.herokuapp.com"
 //   : "http://localhost:3030";
@@ -19,13 +19,22 @@ async function getUserBoards(userDomain) {
   const boardRelations = await axios.get(`${domain}/api/monday/${userDomain}`);
   return boardRelations;
 }
-async function add(fatherBoard, subIds, userId, userDomain) {
+async function add(
+  fatherBoard,
+  subIds,
+  userId,
+  userDomain,
+  mainWebhook,
+  subWebhooks
+) {
   const relation = {
     relation: {
       mainBoard: fatherBoard,
       subBoards: subIds,
       userId,
       userDomain,
+      mainWebhook,
+      subWebhooks,
     },
   };
   console.log(`add -> relation`, relation);
@@ -36,20 +45,11 @@ async function update(mainBoard, subBoards, userId, id, userDomain) {
   const relation = {
     relation: { mainBoard, subBoards, userId, id, userDomain },
   };
-  console.log(
-    `update -> mainBoard, subBoards, userId, id`,
-    mainBoard,
-    subBoards,
-    userId,
-    id
-  );
+  console.log(`update -> relation`, relation);
   await axios.post(`${domain}/api/monday/update`, {
-    mainBoard,
-    subBoards,
-    userId,
-    id,
+    relation,
   });
-  return { mainBoard, subBoards, userId, id };
+  return relation.relation;
 }
 async function createNewItemWebHook(
   boardId,
@@ -59,7 +59,7 @@ async function createNewItemWebHook(
   const mutation = `
   mutation{
     create_webhook (board_id:${boardId}, url:${JSON.stringify(
-    domain + "/api/monday" + endpoint
+    domain + "/" + endpoint
   )}, event:change_specific_column_value, config: ${JSON.stringify(
     JSON.stringify({
       columnId: columnId,
@@ -70,23 +70,42 @@ async function createNewItemWebHook(
     }
   }`;
   const res = await monday.api(mutation);
+  return Number(res.data?.create_webhook?.id);
 }
 async function createMirrorWebHook(boardIds, endpoint = "mirrorItemKR") {
-  console.log(`createMirrorWebHook -> boardIds`, boardIds);
-  const mutation = `mutation{
-    create_webhook (board_id:${boardIds}, url:${JSON.stringify(
-    domain + "/api/monday" + endpoint
-  )}, event:create_item){
-      id
-      board_id
-    }
-  }`;
-  console.log(`createMirrorWebHook -> mutation`, mutation);
-  const res = await monday.api(mutation);
-  console.log(`createMirrorWebHook -> res`, res);
+  try {
+    const mutation = `mutation{
+      create_webhook (board_id:${boardIds}, url:${JSON.stringify(
+      domain + "/" + endpoint
+    )}, event:create_item){
+          id
+          board_id
+        }
+      }`;
+    const res = await monday.api(mutation);
+
+    return res.data?.create_webhook?.id;
+  } catch (err) {
+    console.log(`createMirrorWebHook -> err`, err);
+  }
 }
-async function deleteRelation(_id) {
-  await axios.delete(`${domain}/api/monday/deleteRelation/${_id}`);
+async function deleteRelation(relation) {
+  await axios.delete(`${domain}/api/monday/deleteRelation/${relation._id}`);
+  const webhookIds = [relation.mainWebhook, ...relation.subWebhooks];
+  console.log(`deleteRelation -> webhookIds`, webhookIds);
+  const deleteWebhooks = webhookIds?.forEach(async (webhookId) => {
+    const mutation = `
+    mutation {
+      delete_webhook ( id:${Number(webhookId)}) {
+        id
+        board_id
+      }
+    }
+    `;
+    console.log(`webhookIds?.forEach -> mutation`, mutation);
+    const res = await monday.api(mutation);
+    console.log(`webhookIds?.forEach -> res`, res);
+  });
 }
 function decrypt(token) {
   console.log(

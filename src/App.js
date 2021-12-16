@@ -6,6 +6,14 @@ import mondaySdk from "monday-sdk-js";
 import RelationController from "./views/RelationController";
 import Login from "./views/Login";
 import Close from "./cmps/Close";
+import mondayService from "./services/mondayService";
+import Footer from "./cmps/Footer";
+
+const domain =
+  "https://63bc-2a0e-9cc0-2447-e900-142a-630b-5983-6007.ap.ngrok.io";
+// process.env.NODE_ENV === "production"
+//   ? "https://create-group-integration.herokuapp.com"
+//   : "http://localhost:3030";
 const monday = mondaySdk();
 // const RelationController = lazy(() => import("./cmps/RelationController"));
 
@@ -15,6 +23,7 @@ export default function App() {
   const [userId, setUserId] = useState();
   const [userEmail, setUserEmail] = useState();
   const [user, setUser] = useState();
+  const [isUserExist, setIsUserExist] = useState(false);
 
   useEffect(() => {
     getContext();
@@ -25,7 +34,21 @@ export default function App() {
   useEffect(() => {
     userId && getSlug();
   }, [userId]);
-
+  useEffect(() => {
+    console.log(`useEffect -> userEmail`, userEmail);
+    userEmail && checkForUsers();
+  }, [userEmail]);
+  useEffect(() => {
+    user && setIsUserExist(true);
+  }, [user]);
+  const checkForUsers = async () => {
+    console.log(`checkForUsers -> userEmail`, userEmail);
+    const user = await mondayService.getUserByEmail(userEmail);
+    if (user) {
+      console.log(`checkForUsers -> user`, user);
+      onSetUser(user);
+    }
+  };
   const getContext = async () => {
     const contextData = await monday.get("context");
     setContext(contextData?.data);
@@ -54,6 +77,21 @@ export default function App() {
       res.data.users[0].account.slug
     );
   };
+  const oAuthLogin = async () => {
+    const popup = window.open(
+      `${domain}/api/auth/authorization/${userEmail}, "_blank", "toolbar=yes,scrollbars=yes,resizable=yes,top=500,left=500,width=800,height=800"`
+    );
+    let DBuser;
+    const interval = setInterval(async () => {
+      if (popup.closed) {
+        console.log("hey");
+        clearInterval(interval);
+        DBuser = await mondayService.getUserByEmail(userEmail);
+        console.log(`interval -> user`, DBuser);
+        user || onSetUser(DBuser?.data);
+      }
+    }, 500);
+  };
 
   return (
     <div className="App">
@@ -69,17 +107,12 @@ export default function App() {
             exact
             path="/"
             element={
-              <Login
-                context={context}
-                slug={slug}
-                userEmail={userEmail}
-                userId={userId}
-                onSetUser={onSetUser}
-              />
+              <Login oAuthLogin={oAuthLogin} isUserExist={isUserExist} />
             }
           />
         </Routes>
       </BrowserRouter>
+      <Footer />
     </div>
   );
 }
